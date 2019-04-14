@@ -1,0 +1,544 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0304
+header_name {.h}
+code_name {.cxx}
+class MainUI {open
+} {
+  Function {MainUI()} {open
+  } {
+    Fl_Window mainWindow {
+      label {Ugly Metronome 0.0}
+      callback {OnClose();} open
+      xywh {579 240 740 475} type Double hide
+      code0 {\#include "beat.h"}
+      code1 {\#include <FL/fl_ask.H>} size_range {800 600 0 0}
+    } {
+      Fl_Return_Button StartStopButton {
+        label Start
+        callback {OnStartStopButton()}
+        xywh {10 20 135 60}
+      }
+      Fl_Text_Display BIG_TEMPO {
+        xywh {160 20 190 70} textfont 1 textsize 70
+      }
+      Fl_Browser m_PresetList {
+        callback {OnBrowserClick()}
+        xywh {10 175 530 290} type Hold
+      }
+      Fl_Dial m_Volume {
+        label Volume
+        callback {OnVolChange()}
+        xywh {555 355 105 100} box GTK_ROUND_UP_BOX align 1 maximum 100 step 1 value 100
+      }
+      Fl_Group TimerGroup {
+        label Time open
+        xywh {355 20 305 70} box THIN_DOWN_BOX align 21
+      } {
+        Fl_Button ResetButton {
+          label Reset
+          callback {OnReset()} selected
+          xywh {355 55 70 30}
+        }
+        Fl_Output BIG_TIMER {
+          xywh {435 25 220 60} textfont 1 textsize 30
+        }
+      }
+      Fl_Input m_EditStop {
+        label {Stop Tempo}
+        xywh {110 120 95 30} align 1
+      }
+      Fl_Input m_EditTime {
+        label Time
+        xywh {210 120 95 30} align 1
+      }
+      Fl_Input m_EditNote {
+        label Note
+        xywh {310 120 265 30} align 1
+      }
+      Fl_Button {} {
+        label Apply
+        callback {OnApply()}
+        xywh {580 110 60 25}
+      }
+      Fl_Button {} {
+        label Save
+        callback {OnSave()}
+        xywh {580 140 60 25}
+      }
+      Fl_Input m_EditStart {
+        label START
+        xywh {10 120 95 30} labeltype NO_LABEL align 1
+      }
+      Fl_Button {} {
+        label Delete
+        callback {OnButtonDelete()}
+        xywh {545 175 60 25}
+      }
+      Fl_Group Gr_Instruments {
+        label Instruments open
+        xywh {545 230 120 95} box THIN_DOWN_BOX
+      } {
+        Fl_Round_Button Beep {
+          label Beep
+          callback {InstCallback(Fl_Button *b, void *)}
+          xywh {550 235 70 15} down_box ROUND_DOWN_BOX
+        }
+        Fl_Round_Button WoodBlock {
+          label {Wood Block}
+          callback {InstCallback(Fl_Button *b, void *)}
+          xywh {550 252 70 15} down_box ROUND_DOWN_BOX
+        }
+        Fl_Round_Button SideStick {
+          label {Side Stick}
+          callback {InstCallback(Fl_Button *b, void *)}
+          xywh {550 270 70 15} down_box ROUND_DOWN_BOX
+        }
+        Fl_Round_Button HighHat {
+          label {High Hat}
+          callback {InstCallback(Fl_Button *b, void *)}
+          xywh {550 287 70 15} down_box ROUND_DOWN_BOX
+        }
+        Fl_Round_Button Tambourine {
+          label Tambourine
+          callback {InstCallback(Fl_Button *b, void *)}
+          xywh {550 305 70 15} down_box ROUND_DOWN_BOX
+        }
+      }
+      Fl_Button {} {
+        label {Set Tempo}
+        callback {OnSet()}
+        xywh {10 90 95 30}
+      }
+      Fl_Box {} {
+        label {static text}
+        xywh {15 153 35 17} align 20
+      }
+    }
+  }
+  decl {long m_RunState} {public local
+  }
+  decl {unsigned long m_TimerStart} {public local
+  }
+  decl {int double_clicked} {public local
+  }
+  decl {char *datfile;} {private local
+  }
+  Function {init()} {open
+  } {
+    code {// intialize variables before show
+	m_EditStart->buffer[0] = 0;
+	m_EditStop->buffer[0] = 0;
+	m_EditTime->buffer[0] = 0;
+	m_EditNote->buffer[0] = 0;
+	strcpy(m_EditStart->buffer], "120");
+	// read data file
+	if (ReadDat()) exit(0);
+	
+	// create Jack
+	if (JackInit()) exit (0);
+	JackSetVolume(m_Volume->value());
+	// set up columns in browser
+	int widths[] = { 50, 50, 50, 150, 0 };               // widths for each column
+	m_PresetList->column_widths(widths);
+	m_PresetList->column_char('\\t');                                                       // tabs as column delimiters
+	m_PresetList->type(FL_MULTI_BROWSER);
+	m_PresetList->add("Start\\tStop\\t%Time\\t%Note"); // lines of tab delimited data
+	//m_PresetList->add("root\\t2888\\t0.0\\t0.0\\t1352\\t0\\ttty3\\tSW\\tAug15\\t0:00\\t@b@f/sbin/mingetty tty3");
+	// initialize radio buttons
+	m_RunState = 0;
+	// start the timer here} {}
+  }
+  Function {show()} {open
+  } {
+    code {mainWindow->show(0,NULL);} {}
+  }
+  Function {OnClose()} {open
+  } {
+    code {//KillTimer - it will just elapse
+	//close Jack
+	JackClose();
+	//free Jack
+	WriteDat();
+	exit(0);} {}
+  }
+  Function {OnStartStopButton()} {open
+  } {
+    code {if (m_RimState == 1) {
+	m_RunState = 0;
+	// turn off transport
+	JackRun(0);
+} else {
+	m_RunState = 1;
+	m_TimerStart = GetTickCount();
+	// turn on transport
+	JackRun(1);
+}} {}
+  }
+  Function {OnDelete()} {open
+  } {
+    code {int i;
+
+	i=m_PresetList.GetSelectedCount();
+	if (i == 0) return;
+	for (i=0; i<m_PresetList.GetItemCount(); i++) {
+		if (m_PresetList.GetItemState(i, LVIS_SELECTED) & LVIS_SELECTED) {
+			m_PresetList.DeleteItem(i);
+			if (m_PresetList.GetItemCount() > 0) {
+				if (m_PresetList.GetItemCount() == 1) i--;
+				m_PresetList.SetFocus();
+				m_PresetList.SetItemState(i, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+			}
+			return;
+		}
+	}} {}
+  }
+  Function {OnTimer()} {open
+  } {
+    code {static odd;
+	long f;
+	char t[10];
+	CString s;
+	DWORD elapsed;
+
+	// display tempo every  1 second
+	if (odd == 0) {
+		f = GetBPM();
+		if (f == 0) return;
+		sprintf(t,"%ld",f);
+		SetDlgItemText(IDC_TEMPO, t);
+	}
+	odd = (odd + 1) & 2;
+
+	// display timer every 0.5 seconds
+	if (m_RunState) {
+		elapsed = GetTickCount() - m_TimerStart;
+		elapsed /= 1000;
+		s.Format("%02d:%02d:%02d", (elapsed / 3600), (elapsed % 3600)/60, elapsed % 60);
+		SetDlgItemText(IDC_TIMERDISP, (LPCTSTR)s);
+		UpdateData(FALSE);
+	}} {}
+  }
+  Function {OnReset()} {open
+  } {
+    code {m_TimerStart = GetTickCount();} {}
+  }
+  Function {OnVolChange()} {open
+  } {
+    code {// update the volume
+	BeatSetVolume(m_Volume.value());
+	*pResult = 0;} {}
+  }
+  Function {OnApply()} {open
+  } {
+    code {// set the tempo the the start tempo immediately
+	UpdateData(TRUE);
+	if (Validate(atol((LPCTSTR)m_EditStart), atol((LPCTSTR)m_EditStart), 0)) return;
+	BeatSetTempo(atol((LPCTSTR)m_EditStart), atol((LPCTSTR)m_EditStart), 0);} {}
+  }
+  Function {InstCallback(Fl_Button *b, void *)} {open
+  } {
+    code {BeatStop();
+SetWave(b[0]);} {}
+  }
+  Function {SetWave(long res)} {open
+  } {
+    code {HRSRC rc;
+	HGLOBAL hRc;
+	LPVOID pRc;
+	void *br;
+
+	if (res == 0) {
+		// load nothing
+		BeatLoad(NULL, 0);
+		return;
+	}
+	// find the internal wave resource
+	rc = ::FindResource(NULL, MAKEINTRESOURCE(res), _T("WAVE"));
+	if (rc != NULL) {
+		hRc = ::LoadResource(NULL, rc);
+		if (hRc) {
+			pRc = ::LockResource(hRc);
+			if (pRc) {
+				// get the size of the wave file
+				unsigned char *szw = (unsigned char *)pRc;
+				signed short *bw = (signed short *)&szw[44]; // data bits
+				long *length = (long *)&szw[40]; // length
+
+				if (0 != strncmp((const char *)&szw[36], "data", 4)) {
+					br = NULL;
+				} else {
+					if ((*length > 200000) || (*length < 0)) {
+						br = NULL;
+					} else {
+						BeatLoad(bw, *length);
+						//BeatStruct.BeatWave = bw;
+						//BeatStruct.BeatWaveLength = *length;
+						::UnlockResource(hRc);
+						::FreeResource(pRc);
+						return;
+					}
+				}
+			}
+			::FreeResource(pRc);
+		}
+	} 
+	// load default bing
+	BeatLoad(NULL, 0);} {}
+  }
+  Function {ReadDat()} {open return_type int
+  } {
+    code {char *s;
+	FILE *f;
+	char inbuf[128];
+	int	 flag, vol;
+	long i_start, i_stop, i_time, sel;
+	char note[128];
+	CButton *b;
+	char *c;
+	CString st;
+	int nItem;
+
+	flag = 0;
+	b = NULL;
+	s = GetDatName();
+	if (NULL == s) return;
+	// maybe the file doesn't exist, so return quietly
+	if (NULL == (f=fopen(s,"r"))) {
+		MessageBox("Could not open data file for reading","Error",MB_OK);
+		return;
+	}
+	while (!feof(f)) {
+		inbuf[0] = 0;
+		fgets(inbuf,128,f);
+		switch(inbuf[0]) {
+		case 'I':
+			// next character is instrument
+			switch (inbuf[1]) {
+			case '2':
+				sel = 2;
+				OnRadio2();
+				break;
+			case '3':
+				sel = 3;
+				OnRadio3();
+				break;
+			case '4':
+				sel = 4;
+				OnRadio4();
+				break;
+			case '5':
+				sel = 5;
+				OnRadio5();
+				break;
+			default:
+				sel = 1;
+				OnRadio1();
+				break;
+			}
+			((CButton *)GetDlgItem(IDC_RADIO1))->SetCheck(sel == 1);
+			((CButton *)GetDlgItem(IDC_RADIO2))->SetCheck(sel == 2);
+			((CButton *)GetDlgItem(IDC_RADIO3))->SetCheck(sel == 3);
+			((CButton *)GetDlgItem(IDC_RADIO4))->SetCheck(sel == 4);
+			((CButton *)GetDlgItem(IDC_RADIO5))->SetCheck(sel == 5);
+
+			flag |= FLAG_WAVE_SET;
+			break;
+		case 'D':
+			sscanf(&inbuf[1],"%d,%d,%d,%s",&i_start,&i_stop,&i_time,note);
+			Validate(i_start, i_stop, i_time);
+			m_EditStart.Format("%ld",i_start);
+			m_EditStop.Format("%ld",i_stop);
+			m_EditTime.Format("%ld",i_time);
+			c = strchr(inbuf,'$');
+			if (c) {
+				strtok(++c, "\\xd\\xa");
+				m_EditNote = c;
+			} else m_EditNote.Empty();
+			UpdateData(FALSE);
+			flag |= FLAG_DEFAULT_SET;
+			break;
+		case 'P':
+			sscanf(&inbuf[1],"%d,%d,%d,%s",&i_start,&i_stop,&i_time,note);
+			if (Validate(i_start, i_stop, i_time)) break;
+			st.Format("%ld",i_start);
+			nItem = m_PresetList.InsertItem(m_PresetList.GetItemCount(), st);
+			st.Format("%ld",i_stop);
+			m_PresetList.SetItemText(nItem, 1, st);
+			st.Format("%ld",i_time);
+			m_PresetList.SetItemText(nItem, 2, st);
+			c = strchr(inbuf,'$'); 
+			if (c) {
+				strtok(++c, "\\xd\\xa");
+				m_PresetList.SetItemText(nItem, 3, c);
+			}
+			break;
+		case 'V':
+			sscanf(&inbuf[1], "%ld", &vol);
+			if (vol < 0) vol = 0;
+			if (vol > 100) vol = 100;
+			m_Volume.SetPos(vol);
+			BeatSetVolume(m_Volume.GetPos());
+		}
+
+	}
+	fclose(f);
+	// if not wave set after this procedure, set radio button to beep
+	if (NULL == (flag & FLAG_WAVE_SET)) {
+			((CButton *)GetDlgItem(IDC_RADIO1))->SetCheck(TRUE);
+			OnRadio1();
+	}
+	if (NULL == (flag & FLAG_DEFAULT_SET)) {
+		m_EditStart = "60";
+		m_EditStop = "60";
+		m_EditTime = "0";
+		m_EditNote.Empty();
+		UpdateData(FALSE);
+	}} {}
+  }
+  Function {WriteDat()} {open return_type int
+  } {
+    code {FILE *f;
+	int i;
+	char c1[11], c2[11], c3[11], c4[129];
+
+	if (NULL == datfile) return;
+	// maybe the file doesn't exist, so return quietly
+	if (NULL == (f=fopen(datfile,"w"))) {
+		fl_alert("Could not open data file %s for writing", datfile);
+		return 1;
+	}
+	fprintf(f,"\#Edit this file at your own risk. When in doubt, delete this file and start again.\\n");
+	fprintf(f,"\#Syntax:\\n");
+	fprintf(f,"\#In: Set instrument to n\\n");
+	fprintf(f,"\#Vv: volume (0-100%)\\n");
+	fprintf(f,"\#Dstart,stop,time,$note: default\\n");
+	fprintf(f,"\#Pstart,stop,time,$note: presets\\n");
+	i = 1;
+	if (((CButton *)GetDlgItem(IDC_RADIO2))->GetCheck()) i=2;
+	if (((CButton *)GetDlgItem(IDC_RADIO3))->GetCheck()) i=3;
+	if (((CButton *)GetDlgItem(IDC_RADIO4))->GetCheck()) i=4;
+	if (((CButton *)GetDlgItem(IDC_RADIO5))->GetCheck()) i=5;
+	fprintf(f, "I%d\\n", i);
+	fprintf(f, "V%d\\n", m_Volume.GetPos());
+	fprintf(f, "D%ld,%ld,%ld,$%s\\n", atol((LPCTSTR)m_EditStart),atol((LPCTSTR)m_EditStop),atol((LPCTSTR)m_EditTime),m_EditNote);
+	for (i=0; i<m_PresetList.GetItemCount(); i++) {
+		m_PresetList.GetItemText(i, 0, c1, 10);
+		m_PresetList.GetItemText(i, 1, c2, 10);
+		m_PresetList.GetItemText(i, 2, c3, 10);
+		m_PresetList.GetItemText(i, 3, c4, 128);
+		fprintf(f, "P%ld,%ld,%ld,$%s\\n", atol(c1),atol(c2),atol(c3),c4);
+	}
+	fclose(f);} {}
+  }
+  Function {Validate(long i_start, long i_stop, long i_time)} {open return_type int
+  } {
+    code {int beepflag = 0;
+	if (i_start > MAX_TEMPO) {
+		beepflag++; 
+		i_start = MAX_TEMPO; 
+		MessageBox("Max Tempo Exceeded.","Error",MB_OK);
+	}
+	if (i_start < MIN_TEMPO) {
+		beepflag++; 
+		i_start = MIN_TEMPO; 
+		MessageBox("Min Tempo Too Low","Error",MB_OK);
+	}
+	if (i_stop > MAX_TEMPO) {
+		beepflag++; 
+		i_stop = MAX_TEMPO; 
+		MessageBox("Max Tempo Exceeded.","Error",MB_OK);
+	}
+	if (i_stop < MIN_TEMPO) {
+		beepflag++; 
+		i_stop = MIN_TEMPO; 
+		MessageBox("Min Tempo Too Low","Error",MB_OK);
+	}
+	if (i_time < 0) {
+		beepflag++; 
+		i_time = 0; 
+		MessageBox("Invalid Ramp Time.","Error",MB_OK);
+	}
+	if (i_stop > MAX_RAMP) {
+		beepflag++; 
+		i_time = MAX_RAMP; 
+		MessageBox("Ramp Time too High.","Error",MB_OK);
+	}
+	return beepflag;} {}
+  }
+  Function {OnSave()} {open
+  } {
+    code {int nItem;
+	
+	UpdateData(TRUE);
+	if (Validate(atol((LPCTSTR)m_EditStart), atol((LPCTSTR)m_EditStop), atol((LPCTSTR)m_EditTime))) return;
+	nItem = m_PresetList.InsertItem( 0, m_EditStart);
+    m_PresetList.SetItemText(nItem, 1, m_EditStop);
+	m_PresetList.SetItemText(nItem, 2, m_EditTime);
+    m_PresetList.SetItemText(nItem, 3, m_EditNote);} {}
+  }
+  Function {OnBrowserClick()} {open
+  } {
+    code {POSITION p;
+	int i,j;
+	char c1[11], c2[11], c3[11], c4[129];
+	
+	
+		// detect double click
+	if (this->double_clicked > 0) {
+	i=m_PresetList.GetSelectedCount();
+	i=m_PresetList.GetNextSelectedItem(p);
+	i=m_PresetList.GetNextSelectedItem(p);
+	if (p >= 0) {
+		j = (int)p - 1;
+		m_PresetList.GetItemText(j, 0, c1, 10);
+		m_PresetList.GetItemText(j, 1, c2, 10);
+		m_PresetList.GetItemText(j, 2, c3, 10);
+		m_PresetList.GetItemText(j, 3, c4, 128);
+		if (Validate(atol(c1),atol(c2),atol(c3))) return;
+		m_EditStart = c1;
+		m_EditStop = c2;
+		m_EditTime = c3;
+		m_EditNote = c4;
+		UpdateData(FALSE);
+	}
+	OnButtonApply();		ShowPDF(ArtistBrowser->data(last_artist));  
+	} else {
+		// start double-click timer
+		this->double_clicked++;
+		Fl::add_timeout(0.25, dbl_click_chk, (void *)&double_clicked);
+	}} {}
+  }
+  Function {OnTimer()} {open
+  } {
+    code {static odd;
+	long f;
+	char t[10];
+	CString s;
+	DWORD elapsed;
+
+	// display tempo every  1 second
+	if (odd == 0) {
+		f = GetBPM();
+		if (f == 0) return;
+		sprintf(t,"%ld",f);
+		SetDlgItemText(IDC_TEMPO, t);
+	}
+	odd = (odd + 1) & 2;
+
+	// display timer every 0.5 seconds
+	if (m_RunState) {
+		elapsed = GetTickCount() - m_TimerStart;
+		elapsed /= 1000;
+		s.Format("%02d:%02d:%02d", (elapsed / 3600), (elapsed % 3600)/60, elapsed % 60);
+		SetDlgItemText(IDC_TIMERDISP, (LPCTSTR)s);
+		UpdateData(FALSE);
+	}} {}
+  }
+  Function {OnSet()} {open
+  } {
+    code {// set the tempo the the start tempo immediately
+	UpdateData(TRUE);
+	if (Validate(atol((LPCTSTR)m_EditStart), atol((LPCTSTR)m_EditStart), 0)) return;
+	BeatSetTempo(atol((LPCTSTR)m_EditStart), atol((LPCTSTR)m_EditStart), 0);} {}
+  }
+}

@@ -1,0 +1,28 @@
+#Edit this file at your own risk. When in doubt, delete this file and start again.
+#Syntax:
+#In: Set instrument to n
+#Vv: volume (0-100)
+#Dstart\tstop\ttime\t$note: default
+#Pstart\tstop\ttime\t$note: presets
+#Aclient name: jack connection name for channel A (optional)
+#Bclient name: jack connection name for channel B (optional)
+I3
+V14.000000
+D100	100	0	$Standard  100 {Andante)
+P180	180	0	$STUPID FAST
+P170	170	0	$CRAZY FAST {Allegro)
+P160	160	0	$Standard 160 {Allegro)
+P150	150	0	$Standard 150 {Allegro)
+P140	140	0	$Standard 140 {Allegro)
+P130	130	0	$Standard 130 {Allegro)
+P120	120	0	$Standard 120 {Moderato)
+P110	110	0	$Standard  110 {Moderato)
+P100	100	0	$Standard  100 {Andante)
+P90	90	0	$Standard 90 {Andante)
+P80	80	0	$Standard 80 {Andante)
+P70	70	0	$Standard 70 {Andante)
+P60	60	0	$Standard 60 {Andante)
+P50	50	0	$Standard 50 {Andante)
+P100	120	50	$Ramp 120	
+Asystem:playback_1
+Bsystem:playback_2
