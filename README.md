@@ -5,7 +5,7 @@ Many years ago, I wanted a simple metronome for my PC that I could quickly selec
 ramp function so the tempo would gradually increase as I played along.  I also wanted to keep track of how long I 
 practice a piece at a tempo.  I couldn't find anything, so I created my own.
 
-The original code was developed in Visual Studio 6/MFC with DirectX 9.0.  Thus, it looks ugly, but I got used to it.  
+The original code was developed in Visual Studio 6/MFC with DirectX 9.0.  Thus, it looked ugly, but I got used to it.  
 When I ported MFC to FLTK and DirectX to Jack, I retained the ugliness.
 
 Features:
